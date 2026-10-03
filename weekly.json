@@ -2,6 +2,15 @@
   "_help": "Edit once a week. Newest week is shown on top (sorted by week_of, a Monday, YYYY-MM-DD). boosts[].scope: 'hedge' (RH<->Core hedge from one address) | 'market' | 'wallet' | 'other'. Optional: x (multiplier, omit if the team did not publish one), categories (crypto|stock|etf|preipo|commodity|fx), symbols, note. Only put here what the Lighter team actually announced, and link the source.",
   "weeks": [
     {
+      "week_of": "2026-09-28",
+      "drop_points": 95000,
+      "headline": "95,000 points distributed on Oct 2. Team hint: long stocks on Lighter RH and hedge them with a short on Lighter Core.",
+      "boosts": [
+        { "scope": "hedge", "categories": ["stock"], "note": "Stocks, RH long + Core short. No multiplier published." }
+      ],
+      "source": "Lighter team, Oct 2 2026"
+    },
+    {
       "week_of": "2026-09-21",
       "drop_points": 90000,
       "headline": "90,000 points distributed on Sep 25. Team hint: long a single stock on Lighter RH and hedge it with a short on Lighter Core.",
