@@ -1,5 +1,5 @@
 {
-  "_help": "Edit once a week. Newest week is shown on top (sorted by week_of, a Monday, YYYY-MM-DD). boosts[].scope: 'hedge' (RH<->Core hedge from one address) | 'market' | 'wallet' | 'other'. Optional: x (multiplier, omit if the team did not publish one), categories (crypto|stock|etf|preipo|commodity|fx), symbols, note. Only put here what the Lighter team actually announced, and link the source.",
+  "_help": "Edit once a week. Newest week is shown on top (sorted by week_of, a Monday, YYYY-MM-DD). announced: date of the team's post (YYYY-MM-DD); the entry counts as current through 7 days after it. boosts[].scope: 'hedge' (RH<->Core hedge from one address) | 'market' | 'wallet' | 'other'. Optional: x (multiplier, omit if the team did not publish one), categories (crypto|stock|etf|preipo|commodity|fx), symbols, note. Only put here what the Lighter team actually announced, and link the source.",
   "weeks": [
     {
       "week_of": "2026-09-28",
@@ -8,7 +8,9 @@
       "boosts": [
         { "scope": "hedge", "categories": ["stock"], "note": "Stocks, RH long + Core short. No multiplier published." }
       ],
-      "source": "Lighter team, Oct 2 2026"
+      "warning": "Artificial trading activities will not earn points.",
+      "announced": "2026-10-02",
+      "source": "Lighter Discord, Oct 2 2026"
     },
     {
       "week_of": "2026-09-21",
