@@ -1,0 +1,24 @@
+{
+  "_help": "Edit once a week. Newest week is shown on top (sorted by week_of, a Monday, YYYY-MM-DD). boosts[].scope: 'hedge' (RH<->Core hedge from one address) | 'market' | 'wallet' | 'other'. Optional: x (multiplier, omit if the team did not publish one), categories (crypto|stock|etf|preipo|commodity|fx), symbols, note. Only put here what the Lighter team actually announced, and link the source.",
+  "weeks": [
+    {
+      "week_of": "2026-09-21",
+      "drop_points": 90000,
+      "headline": "90,000 points distributed on Sep 25. Team hint: long a single stock on Lighter RH and hedge it with a short on Lighter Core.",
+      "boosts": [
+        { "scope": "hedge", "categories": ["stock"], "note": "Single stocks, RH long + Core short. No multiplier published." }
+      ],
+      "warning": "Artificial trading activities will not earn points.",
+      "source": "Lighter Discord #announcements, Sep 25 2026"
+    },
+    {
+      "week_of": "2026-09-07",
+      "drop_points": 80000,
+      "headline": "RH ↔ Core hedges from the same address counted with a 2.5x multiplier.",
+      "boosts": [
+        { "scope": "hedge", "x": 2.5, "note": "Long on one venue, short on the other, same L1 address." }
+      ],
+      "source": "Lighter team"
+    }
+  ]
+}

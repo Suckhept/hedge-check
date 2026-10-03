@@ -1,0 +1,1 @@
+{"name":"hedge-check","private":true,"type":"module","scripts":{"test":"node --test tests/lib.test.mjs tests/proxy.test.mjs"}}
