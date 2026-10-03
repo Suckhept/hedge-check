@@ -184,3 +184,14 @@ test("calculator: size floors to the common decimals without float drift", () =>
   assert.equal(L.pairCalc(m, 2.9, 2).size, 0.29);
   assert.equal(L.pairCalc(m, 2.999, 2).size, 0.29);
 });
+
+test("drop estimate: pool split pro rata, price from FDV", () => {
+  const d = L.dropEstimate(2e9, 2e6, 1000, 11e6, 1e9);
+  close(d.price, 2);
+  close(d.poolUsd, 22e6);
+  close(d.litPerPoint, 5.5);
+  close(d.usdPerPoint, 11);
+  close(d.myUsd, 11000);
+  assert.equal(L.dropEstimate(2e9, 0, 1000, 11e6, 1e9), null);
+  assert.equal(L.dropEstimate(2e9, 2e6, "x", 11e6, 1e9).myUsd, 0);
+});

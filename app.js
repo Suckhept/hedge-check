@@ -15,6 +15,9 @@ const CONFIG = {
       api: "https://mainnet.zklighter.elliot.ai", explorer: "https://explorer.elliot.ai/api",
       ui: "https://app.lighter.xyz", ref: false },
   },
+  siteUrl: "https://hedge-check.vercel.app",
+  // Drop calculator assumptions. Total points are not published, so the user picks a scenario.
+  drop: { poolLit: 11_000_000, supply: 1_000_000_000, scenarios: [1e6, 2e6, 3e6, 5e6], fdvMin: 0.5e9, fdvMax: 20e9, ptsMin: 0.5e6, ptsMax: 10e6 },
   volumeDays: 7,
   volumeMaxPages: 30,      // 100 logs per page
 };
@@ -118,11 +121,11 @@ function renderWeek() {
   if (!S.latest) { card.innerHTML = `<p class="muted">No team updates recorded yet.</p>`; $("week-list").innerHTML = ""; return; }
   const w = S.latest.week;
   card.innerHTML = `
-    <div class="eyebrow"><span>Latest team update · week of ${esc(dateLong(w.week_of))}</span>${w.drop_points ? `<span>${fmt(w.drop_points, 0)} pts drop</span>` : ""}</div>
+    <div class="eyebrow"><span>${S.latest.stale ? "Last recorded rules" : "This week's rules"} · week of ${esc(dateLong(w.week_of))}</span>${w.drop_points ? `<span>${fmt(w.drop_points, 0)} pts</span>` : ""}</div>
     <div class="head">${esc(w.headline)}</div>
     <div class="chips">${(w.boosts || []).map(boostChip).join("")}</div>
     ${w.warning ? `<p class="fine" style="margin-top:12px">${esc(w.warning)}</p>` : ""}
-    ${S.latest.stale ? `<p class="stale">This is the latest update we recorded. Check Lighter's announcements for this week's rules.</p>` : ""}
+    ${S.latest.stale ? `<p class="stale">Last recorded update. Check Lighter's announcements for newer rules.</p>` : ""}
     <p class="fine" style="margin-top:10px"><a href="#week">All updates</a></p>`;
   $("week-list").innerHTML = [w, ...S.latest.rest].map((x) => `
     <article class="week-item"><div class="meta">Week of ${esc(dateLong(x.week_of))}${x.drop_points ? ` · ${fmt(x.drop_points, 0)} points distributed` : ""}${x.source ? ` · ${esc(x.source)}` : ""}</div>
@@ -142,7 +145,7 @@ async function renderAnnouncements() {
     } catch (e) { /* optional block */ }
   }));
   out.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-  $("ann").innerHTML = out.length ? `<div class="ann"><h3>Live notices from the Lighter API</h3>${out.slice(0, 6).map((a) => `
+  $("ann").innerHTML = out.length ? `<div class="ann"><h3 style="margin-top:22px">Notices from Lighter</h3>${out.slice(0, 6).map((a) => `
     <div class="ann-item"><div class="v">${esc(a.venue)}</div><div class="t">${esc(a.title)}</div><div class="muted">${esc(a.content)}</div></div>`).join("")}</div>` : "";
 }
 
@@ -151,11 +154,11 @@ async function renderAnnouncements() {
 // ---------------------------------------------------------------------------
 const FILTERS = [["all", "All"], ["boost", "This week"], ["stock", "Stocks"], ["preipo", "Pre-IPO"], ["crypto", "Crypto"], ["etf", "ETF / index"], ["commodity", "Commodities"], ["fx", "FX"]];
 const COLS = [
-  ["symbol", "Market"], ["pair", "Best pair, %/day"], ["dir", "Direction"],
-  ["fr", "RH funding /8h"], ["fc", "Core funding /8h"], ["vr", "RH 24h vol"], ["vc", "Core 24h vol"],
-  ["or", "RH OI"], ["oc", "Core OI"], ["lev", "Max lev"],
+  ["symbol", "Market"], ["pair", "Pair funding / day"], ["dir", "Long on"],
+  ["fr", "RH / 8h", "hide-s"], ["fc", "Core / 8h", "hide-s"], ["vol", "24h volume"], ["lev", "Max leverage", "hide-s"],
 ];
-const T = { filter: "all", q: "", sort: "pair", dir: -1 };
+const TOP = 12; // rows shown before "Show all"
+const T = { filter: "all", q: "", sort: "pair", dir: -1, all: false };
 
 function marketRows() {
   const week = S.latest && S.latest.week;
@@ -164,12 +167,12 @@ function marketRows() {
     const best = lr == null || lc == null ? null : lr >= lc ? { v: lr, on: "rh" } : { v: lc, on: "core" };
     return { m, boost: L.boostFor(week, m), best,
       k: { symbol: m.symbol, pair: best ? best.v : -Infinity, dir: best ? best.on : "", fr: m.rh.fundingRate ?? -Infinity,
-        fc: m.core.fundingRate ?? -Infinity, vr: m.rh.vol24, vc: m.core.vol24, or: m.rh.oiUsd, oc: m.core.oiUsd,
+        fc: m.core.fundingRate ?? -Infinity, vol: (m.rh.vol24 || 0) + (m.core.vol24 || 0),
         lev: Math.min(m.rh.maxLev || 0, m.core.maxLev || 0) } };
   });
 }
 function renderFilters() {
-  $("filters").innerHTML = FILTERS.map(([k, l]) => `<button type="button" data-f="${k}" aria-pressed="${T.filter === k}">${esc(l)}</button>`).join("") +
+  $("filters").innerHTML = FILTERS.map(([k, l]) => `<button type="button" data-f="${k}" aria-pressed="${T.filter === k}">${esc(k === "boost" && S.latest && S.latest.stale ? "Last update" : l)}</button>`).join("") +
     `<input id="mkt-q" type="search" placeholder="Search market" aria-label="Search market" value="${esc(T.q)}">`;
 }
 function renderTable() {
@@ -181,29 +184,36 @@ function renderTable() {
     const x = a.k[T.sort], y = b.k[T.sort];
     return (typeof x === "string" ? x.localeCompare(y) : x - y) * T.dir;
   });
-  const th = COLS.map(([k, l]) => `<th scope="col" data-k="${k}"${T.sort === k ? ` aria-sort="${T.dir > 0 ? "ascending" : "descending"}"` : ""}>${esc(l)}${T.sort === k ? (T.dir > 0 ? " ↑" : " ↓") : ""}</th>`).join("");
-  const thin = (v) => (v < 50000 ? ' class="thin" title="Under $50k traded in 24h: thin book"' : "");
-  const body = rows.length ? rows.map(({ m, boost, best }) => `
+  const found = rows.length;
+  const cut = !T.all && T.filter === "all" && !T.q && found > TOP;
+  if (cut) rows = rows.slice(0, TOP);
+  const th = COLS.map(([k, l, c]) => `<th scope="col" data-k="${k}"${c ? ` class="${c}"` : ""}${T.sort === k ? ` aria-sort="${T.dir > 0 ? "ascending" : "descending"}"` : ""}>${esc(l)}${T.sort === k ? (T.dir > 0 ? " ↑" : " ↓") : ""}</th>`).join("");
+  const body = rows.length ? rows.map(({ m, boost, best }) => {
+    const thin = Math.min(m.rh.vol24 || 0, m.core.vol24 || 0) < 50000;
+    const lev = Math.min(m.rh.maxLev || 0, m.core.maxLev || 0);
+    return `
     <tr data-sym="${esc(m.symbol)}" tabindex="0">
-      <td><span class="sym">${esc(m.symbol)}</span><span class="cat">${esc(L.CATEGORY_LABELS[m.category])}</span>${boost ? `<span class="boost-tag">${boost.x ? "×" + esc(boost.x) : "this week"}</span>` : ""}</td>
-      <td class="${cls(best && best.v)}">${best ? pct(best.v * 100, 4, true) : "—"}</td>
-      <td>${best ? (best.on === "rh" ? "Long RH · short Core" : "Long Core · short RH") : "—"}</td>
-      <td>${m.rh.fundingRate == null ? "—" : pct(m.rh.fundingRate * 100, 4, true)}</td>
-      <td>${m.core.fundingRate == null ? "—" : pct(m.core.fundingRate * 100, 4, true)}</td>
-      <td${thin(m.rh.vol24)}>${usdc(m.rh.vol24)}</td><td${thin(m.core.vol24)}>${usdc(m.core.vol24)}</td>
-      <td>${usdc(m.rh.oiUsd)}</td><td>${usdc(m.core.oiUsd)}</td>
-      <td>${Math.min(m.rh.maxLev || 0, m.core.maxLev || 0) ? Math.min(m.rh.maxLev, m.core.maxLev) + "x" : "—"}</td>
-    </tr>`).join("") : `<tr><td colspan="${COLS.length}" class="muted">No markets match this filter.</td></tr>`;
+      <td><span class="sym">${esc(m.symbol)}</span><span class="cat">${esc(L.CATEGORY_LABELS[m.category])}</span>${boost ? `<span class="boost-tag">${boost.x ? "×" + esc(boost.x) : S.latest.stale ? "last update" : "this week"}</span>` : ""}</td>
+      <td class="${cls(best && best.v)}">${best ? pct(best.v * 100, 3, true) : "—"}</td>
+      <td>${best ? (best.on === "rh" ? "RH" : "Core") : "—"}</td>
+      <td class="hide-s sub">${m.rh.fundingRate == null ? "—" : pct(m.rh.fundingRate * 100, 4, true)}</td>
+      <td class="hide-s sub">${m.core.fundingRate == null ? "—" : pct(m.core.fundingRate * 100, 4, true)}</td>
+      <td${thin ? ' class="thin"' : ""} title="RH ${usdc(m.rh.vol24)} · Core ${usdc(m.core.vol24)}${thin ? " · one side traded under $50k: thin book" : ""}">${usdc((m.rh.vol24 || 0) + (m.core.vol24 || 0))}</td>
+      <td class="hide-s">${lev ? lev + "x" : "—"}</td>
+    </tr>`; }).join("") : `<tr><td colspan="${COLS.length}" class="muted">No markets match this filter.</td></tr>`;
   $("mkt-table").querySelector("thead").innerHTML = `<tr>${th}</tr>`;
   $("mkt-table").querySelector("tbody").innerHTML = body;
-  const total = S.markets.filter(L.onBoth).length;
-  $("mkt-note").textContent = `${total} markets are active on both venues. Funding is the rate each venue reports per 8 hours; "best pair" is what a long/short pair earns per day at those rates (negative = it pays). Updated ${S.loadedAt.toLocaleTimeString()}.`;
+  const more = $("mkt-more");
+  more.hidden = !cut;
+  more.textContent = `Show all ${found} markets`;
+  $("mkt-note").textContent = `Pair funding is what a long + short pair earns per day at current rates; negative means it pays. "Long on" is the side that earns it. Rates change every hour. Updated ${S.loadedAt.toLocaleTimeString()}.`;
 }
 function bindTable() {
   $("filters").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-f]"); if (!b) return;
     T.filter = b.dataset.f; renderFilters(); renderTable();
   });
+  $("mkt-more").addEventListener("click", () => { T.all = true; renderTable(); });
   $("filters").addEventListener("input", (e) => { if (e.target.id === "mkt-q") { T.q = e.target.value.trim(); renderTable(); } });
   $("mkt-table").querySelector("thead").addEventListener("click", (e) => {
     const th = e.target.closest("th[data-k]"); if (!th) return;
@@ -248,17 +258,94 @@ function renderCalc() {
       <dt>Est. liquidation</dt><dd>${price(x.liq)}</dd><dt>Buffer</dt><dd>${pct(x.bufferPct, 1)}</dd></dl></div>`;
   };
   out.innerHTML = `
-    <div class="muted">Each leg</div>
+    <div class="muted">Size of each leg</div>
     <div class="calc-size">${fmt(c.size, c.decimals)} ${esc(m.symbol)}</div>
     <div class="muted">≈ ${usd(c.size * c.price)} per leg · ${usd(c.totalMargin)} total margin · pair funding ${c.fundingDayUsd == null ? "unknown" : `<b class="${cls(c.fundingDayUsd)}">${usd(c.fundingDayUsd)}/day</b>`}</div>
     ${c.tooSmall ? `<div class="note warn">Below the minimum order on one venue: at least ${fmt(c.minBase, c.decimals + 2)} ${esc(m.symbol)} and $${fmt(c.minQuote, 0)}. Increase the size.</div>` : ""}
     ${c.leverageCapped ? `<div class="note warn">Leverage capped at ${c.leverage}x, the lower maximum of the two markets.</div>` : ""}
     <div class="calc-legs">${leg("rh")}${leg("core")}</div>
-    <p class="fine">Liquidation is an isolated-margin estimate at today's mark, before fees and funding. Size is rounded down to ${c.decimals} decimals so both venues accept the same amount.</p>
+    <p class="fine">Liquidation is an isolated-margin estimate at today's mark, before fees and funding. Lighter defaults to cross margin, where it depends on your whole account. Check the price Lighter shows before you confirm.</p>
     <div class="calc-actions">
       <a class="btn btn-ink" href="${esc(refUrl("rh", m.symbol))}" target="_blank" rel="noopener">Open ${esc(m.symbol)} on Lighter RH</a>
       <a class="btn btn-line" href="${esc(refUrl("core", m.symbol))}" target="_blank" rel="noopener">Open on Lighter Core</a>
     </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Drop calculator
+// ---------------------------------------------------------------------------
+const D = CONFIG.drop;
+const big = (x) => (x >= 1e9 ? (x / 1e9).toFixed(x >= 1e10 ? 0 : 1).replace(/\.0$/, "") + "B" : (x / 1e6).toFixed(x >= 1e7 ? 0 : 1).replace(/\.0$/, "") + "M");
+const money = (x) => (x >= 1000 ? usd(x, 0) : usd(x, 2));
+// log sliders: 0..100 -> min..max, rounded to 2 significant digits
+const fromT = (t, lo, hi) => Number((lo * Math.pow(hi / lo, t / 100)).toPrecision(2));
+const toT = (v, lo, hi) => Math.round((Math.log(v / lo) / Math.log(hi / lo)) * 100);
+function dropState() {
+  return { fdv: fromT(+$("d-fdv").value, D.fdvMin, D.fdvMax), total: fromT(+$("d-total").value, D.ptsMin, D.ptsMax), mine: parseFloat($("d-points").value) || 0 };
+}
+function renderDrop() {
+  const s = dropState();
+  const e = L.dropEstimate(s.fdv, s.total, s.mine, D.poolLit, D.supply);
+  $("d-fdv-out").textContent = "$" + big(s.fdv);
+  $("d-total-out").textContent = big(s.total);
+  const lit = S.bySym.LIT && (S.bySym.LIT.core?.mark || S.bySym.LIT.rh?.mark);
+  $("d-now").hidden = !lit;
+  if (lit) $("d-now").textContent = `Use today's price ($${fmt(lit, 2)} = $${big(lit * D.supply)} FDV)`;
+  const rows = D.scenarios.map((tp) => {
+    const x = L.dropEstimate(s.fdv, tp, s.mine, D.poolLit, D.supply);
+    return `<tr><td>${big(tp)} points</td><td>${money(x.usdPerPoint)}</td><td><b>${money(x.myUsd)}</b></td></tr>`;
+  }).join("");
+  const text = `If $LIT trades at $${big(s.fdv)} FDV and ${big(s.total)} points share ${big(D.poolLit)} LIT, one Lighter point is worth ${money(e.usdPerPoint)}.${s.mine ? ` My ${fmt(s.mine, 0)} points: ${money(e.myUsd)}.` : ""}\n\nTry your numbers: ${CONFIG.siteUrl}/#drop\nTrade on Lighter RH: ${refUrl("rh")}`;
+  $("drop-out").innerHTML = `
+    <div class="muted">Your drop</div>
+    <div class="calc-size">${money(e.myUsd)}</div>
+    <div class="muted">${fmt(e.myLit, 0)} LIT at $${fmt(e.price, 2)} · 1 point ≈ <b>${money(e.usdPerPoint)}</b> · pool worth $${big(e.poolUsd)}</div>
+    <table class="scen"><thead><tr><th>If total points are</th><th>1 point</th><th>Your drop</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="fine">A guess, not a promise. Assumes ${big(D.poolLit)} LIT split evenly per point and a ${big(D.supply)} LIT max supply. Lighter has not published total points or final terms.</p>
+    <div class="calc-actions">
+      <a class="btn btn-ink" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">Share on X</a>
+      <button class="btn btn-line" type="button" id="d-card">Download card</button>
+      <a class="btn btn-line" href="${esc(refUrl("rh"))}" target="_blank" rel="noopener">Farm points on Lighter RH</a>
+    </div>`;
+  $("d-card").onclick = () => dropCard(s, e);
+}
+// 1200x675 PNG drawn on a canvas, for attaching to a post
+function dropCard(s, e) {
+  const c = document.createElement("canvas"); c.width = 1200; c.height = 675;
+  const g = c.getContext("2d"), font = (w, px) => (g.font = `${w} ${px}px Inter, system-ui, sans-serif`);
+  g.fillStyle = "#0C1012"; g.fillRect(0, 0, 1200, 675);
+  g.fillStyle = "#2EC4AE"; g.beginPath(); g.arc(86, 84, 13, 0, 7); g.fill();
+  g.fillStyle = "#8F91FF"; g.beginPath(); g.arc(104, 84, 13, 0, 7); g.fill();
+  g.fillStyle = "#E7EEEC"; font(700, 30); g.fillText("Hedge Check", 132, 95);
+  g.fillStyle = "#8E999C"; font(500, 30); g.fillText(s.mine ? `My Lighter drop with ${fmt(s.mine, 0)} points` : "What one Lighter point could be worth", 72, 210);
+  g.fillStyle = "#E7EEEC"; font(700, 132); g.fillText(money(s.mine ? e.myUsd : e.usdPerPoint), 66, 350);
+  const cells = [["LIT FDV", "$" + big(s.fdv)], ["Total points", big(s.total)], ["1 point", money(e.usdPerPoint)], ["Pool", big(D.poolLit) + " LIT"]];
+  cells.forEach(([l, v], i) => {
+    const x = 72 + i * 270;
+    g.fillStyle = "#8E999C"; font(500, 24); g.fillText(l, x, 440);
+    g.fillStyle = "#E7EEEC"; font(600, 40); g.fillText(v, x, 490);
+  });
+  g.fillStyle = "#253034"; g.fillRect(72, 530, 1056, 2);
+  g.fillStyle = "#2EC4AE"; font(600, 28); g.fillText(`Trade on Lighter RH with code ${CONFIG.referralCode}`, 72, 582);
+  g.fillStyle = "#8E999C"; font(500, 22);
+  g.fillText(CONFIG.siteUrl.replace(/^https?:\/\//, "") + " · an estimate, not financial advice", 72, 622);
+  c.toBlob((b) => {
+    const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "lighter-drop.png";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }, "image/png");
+}
+function initDrop() {
+  $("d-fdv").value = toT(2e9, D.fdvMin, D.fdvMax);
+  $("d-total").value = toT(2e6, D.ptsMin, D.ptsMax);
+  $("d-points").value = store.get("hc-points") || 1000;
+  $("d-fdv").addEventListener("input", () => { D.touched = true; });
+  $("drop-form").addEventListener("input", () => { store.set("hc-points", $("d-points").value); renderDrop(); });
+  $("drop-form").addEventListener("submit", (e) => e.preventDefault());
+  $("d-now").addEventListener("click", () => {
+    const lit = S.bySym.LIT && (S.bySym.LIT.core?.mark || S.bySym.LIT.rh?.mark);
+    if (lit) { $("d-fdv").value = toT(Math.min(D.fdvMax, Math.max(D.fdvMin, lit * D.supply)), D.fdvMin, D.fdvMax); renderDrop(); }
+  });
+  renderDrop();
 }
 
 // ---------------------------------------------------------------------------
@@ -320,7 +407,7 @@ function venueCard(k, d, vol) {
   const tok = S.address ? store.get(tokenKey(k, S.address)) : null;
   return `<article class="venue ${k}" id="venue-${k}">
     <h3><span>${esc(v.name)}</span><a href="${esc(refUrl(k))}" target="_blank" rel="noopener">Open ↗</a></h3>
-    ${d.missing ? `<p class="muted">No account on this venue for this address yet.</p>` : `
+    ${d.missing ? `<p class="muted">No account on this venue for this address yet. <a href="${esc(refUrl(k))}" target="_blank" rel="noopener">Open one ↗</a></p>` : `
     <dl class="kv">
       <dt>Equity</dt><dd>${usd(d.equity)}</dd>
       <dt>Free to trade</dt><dd>${usd(d.available)}</dd>
@@ -366,7 +453,7 @@ function pairCard(r) {
   const label = { ok: "Hedged", warn: "Needs a tweak", bad: r.kind === "single" ? "Unhedged" : r.kind === "same" ? "Same direction" : "Act now" }[r.state];
   const boost = m ? L.boostFor(S.latest && S.latest.week, m) : null;
   return `<article class="pair ${r.state}">
-    <div class="pair-top"><div class="pair-sym">${esc(r.symbol)}<small>${esc(L.CATEGORY_LABELS[r.category])}${boost && r.kind === "pair" ? ` · this week's focus` : ""}</small></div><span class="badge ${r.state}">${esc(label)}</span></div>
+    <div class="pair-top"><div class="pair-sym">${esc(r.symbol)}<small>${esc(L.CATEGORY_LABELS[r.category])}${boost && r.kind === "pair" && !S.latest.stale ? ` · this week's focus` : ""}</small></div><span class="badge ${r.state}">${esc(label)}</span></div>
     <div class="spine" role="img" aria-label="RH ${r.r ? (r.rNet > 0 ? "long" : "short") + " " + fmt(Math.abs(r.rNet), 6) : "none"}, Core ${r.c ? (r.cNet > 0 ? "long" : "short") + " " + fmt(Math.abs(r.cNet), 6) : "none"}">
       <div class="bar-l">${bar(r.r, r.rNet, nR, "")}</div>
       <div class="mid">delta<b>${r.delta === 0 ? "0" : (r.delta > 0 ? "+" : "−") + fmt(Math.abs(r.delta), 6)}</b>${usd(r.deltaUsd, 0)}</div>
@@ -394,7 +481,7 @@ async function check(addr) {
     if (stale()) return;
     S.wallet = { rh, core };
     const rows = L.analysePairs(rh.legs, core.legs, S.bySym);
-    const fundDay = rows.reduce((s, r) => s + (r.fundPair || 0), 0);
+    const fundDay = rows.reduce((s, r) => s + (r.fundR == null || r.fundC == null ? 0 : r.fundPair || 0), 0);
     const netDelta = rows.reduce((s, r) => s + Math.abs(r.deltaUsd || 0), 0); // per-market, no cross-asset netting
     const counts = rows.reduce((c, r) => ((c[r.state] = (c[r.state] || 0) + 1), c), {});
     const health = rows.length ? (counts.bad ? `${counts.bad} need action` : counts.warn ? `${counts.warn} need a tweak` : "All hedged") : "No positions";
@@ -498,6 +585,7 @@ function initChrome() {
     store.set("hc-theme", next);
   });
   $("form").addEventListener("submit", (e) => { e.preventDefault(); check($("addr").value); });
+  initDrop();
   $("calc-form").addEventListener("input", renderCalc);
   $("calc-form").addEventListener("change", renderCalc);
 }
@@ -512,12 +600,14 @@ async function boot() {
     await weekP;
     renderFilters(); renderTable(); bindTable();
     fillCalcMarkets(); renderCalc();
+    if (!D.touched) $("d-now").click(); else renderDrop();
     $("updated").textContent = `Market data loaded ${S.loadedAt.toLocaleString()}`;
   } catch (e) {
     $("mkt-table").querySelector("tbody").innerHTML = `<tr><td class="err">${esc(e.message)}</td></tr>`;
     $("calc-out").innerHTML = `<p class="err">${esc(e.message)}</p>`;
   }
   renderAnnouncements();
+  if (hash === "drop") $("drop").scrollIntoView();
   if (L.isAddress(hash)) { $("addr").value = hash; check(hash); }
 }
 boot();

@@ -13,7 +13,7 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <script>try{const t=localStorage.getItem("hc-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
@@ -22,11 +22,11 @@
   <div class="wrap top-in">
     <a class="brand" href="/" aria-label="Hedge Check home"><span class="dots" aria-hidden="true"><i class="d-rh"></i><i class="d-core"></i></span>Hedge Check</a>
     <nav class="nav" aria-label="Sections">
-      <a href="#wallet">Wallet</a><a href="#markets">Markets</a><a href="#calc">Calculator</a><a href="#week">This week</a><a href="#guide">Guide</a>
+      <a href="#markets">Markets</a><a href="#calc">Calculator</a><a href="#drop">Drop</a><a href="#week">Updates</a><a href="#guide">Guide</a>
     </nav>
     <div class="top-actions">
       <button class="icon-btn" id="theme" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">◐</button>
-      <a class="btn btn-ink ref-link" data-venue="rh" href="#" target="_blank" rel="noopener">Trade on Lighter RH</a>
+      <a class="btn btn-line ref-link" data-venue="rh" href="#" target="_blank" rel="noopener">Open Lighter RH</a>
     </div>
   </div>
 </header>
@@ -34,14 +34,14 @@
 <main>
   <section class="hero wrap" id="wallet">
     <div class="hero-text">
-      <h1>Both Lighter venues.<br>One wallet.</h1>
-      <p class="lede">Paste an address to see its Robinhood Chain and Core positions side by side: whether the hedge is balanced, how far each leg is from liquidation, what the pair pays in funding, and how much it traded this week.</p>
+      <h1>Check your Lighter hedge</h1>
+      <p class="lede">Paste a wallet to see its Robinhood Chain and Core positions side by side: delta, distance to liquidation, funding and 7-day volume.</p>
       <form class="addr" id="form" autocomplete="off">
         <label class="sr" for="addr">Wallet address</label>
         <input id="addr" name="addr" placeholder="0x… wallet address" spellcheck="false">
         <button class="btn btn-ink" id="go" type="submit">Check</button>
       </form>
-      <p class="fine">Read-only. Public Lighter data only: no wallet connection, no keys, nothing stored on a server.</p>
+      <p class="fine">Read-only. No wallet connection, no keys. New to Lighter RH? <a class="ref-link" data-venue="rh" href="#" target="_blank" rel="noopener">Start with code <b class="ref-code"></b></a></p>
       <p class="err" id="err" role="alert" hidden></p>
     </div>
     <aside class="week-card" id="week-card" aria-label="Latest team update"><p class="muted">Loading the latest team update…</p></aside>
@@ -51,23 +51,24 @@
 
   <section class="wrap block" id="markets">
     <div class="block-head">
-      <h2>Markets on both venues</h2>
-      <p class="muted">What a delta-neutral pair costs or earns right now, and how deep each side is. Click a row to size a pair.</p>
+      <h2>Markets</h2>
+      <p class="muted">Listed on both venues. Click a row to size a pair.</p>
     </div>
     <div class="filters" id="filters" role="toolbar" aria-label="Filter markets"></div>
     <div class="table-wrap"><table class="mkt" id="mkt-table"><thead></thead><tbody><tr><td class="muted">Loading markets from both venues…</td></tr></tbody></table></div>
-    <p class="fine" id="mkt-note"></p>
+    <button class="btn btn-line more" id="mkt-more" type="button" hidden></button>
+    <p class="fine" id="mkt-note" style="margin-top:10px"></p>
   </section>
 
   <section class="wrap block" id="calc">
     <div class="block-head">
       <h2>Pair calculator</h2>
-      <p class="muted">Equal size in coins on both venues, rounded to a precision both markets accept.</p>
+      <p class="muted">The same size in coins on both venues.</p>
     </div>
     <div class="calc">
       <form class="calc-in" id="calc-form" autocomplete="off">
         <label>Market<select id="c-market"></select></label>
-        <label>Size of each leg, $<input id="c-usd" type="number" min="1" step="any" value="1000" inputmode="decimal"></label>
+        <label>Size per leg, $<input id="c-usd" type="number" min="1" step="any" value="1000" inputmode="decimal"></label>
         <label>Leverage <output id="c-lev-out">3x</output><input id="c-lev" type="range" min="1" max="10" step="1" value="3"></label>
         <fieldset class="seg"><legend>Long on</legend>
           <label><input type="radio" name="c-dir" value="rh" checked><span>Lighter RH</span></label>
@@ -78,35 +79,52 @@
     </div>
   </section>
 
+  <section class="wrap block" id="drop">
+    <div class="block-head">
+      <h2>Drop calculator</h2>
+      <p class="muted">11M LIT go to point holders. Move the sliders to see what a point could be worth.</p>
+    </div>
+    <div class="calc">
+      <form class="calc-in" id="drop-form" autocomplete="off">
+        <label>Your points<input id="d-points" type="number" min="0" step="any" value="1000" inputmode="decimal"></label>
+        <label>LIT fully diluted value <output id="d-fdv-out"></output><input id="d-fdv" type="range" min="0" max="100" step="1" value="38"></label>
+        <button class="link-btn" id="d-now" type="button" hidden></button>
+        <label>Total points at the end <output id="d-total-out"></output><input id="d-total" type="range" min="0" max="100" step="1" value="46"></label>
+      </form>
+      <div class="calc-out" id="drop-out"></div>
+    </div>
+  </section>
+
   <section class="wrap block" id="week">
-    <div class="block-head"><h2>Team updates</h2><p class="muted">What the Lighter team announced, week by week. Rules change often; the source is linked for each entry.</p></div>
+    <div class="block-head"><h2>Team updates</h2><p class="muted">What the Lighter team announced. Rules change weekly.</p></div>
     <div id="week-list"></div>
     <div id="ann"></div>
   </section>
 
   <section class="wrap block guide" id="guide">
-    <div class="block-head"><h2>How to hedge across RH and Core</h2></div>
+    <div class="block-head"><h2>How to hedge</h2><p class="muted">Long on one venue, short on the other, from the same address.</p></div>
     <ol class="steps">
-      <li><b>Use one address for both venues.</b> The hedge only counts when both legs sit on the same L1 address. Not a second wallet, not a sub-account trick.</li>
-      <li><b>Pick a market listed on both.</b> The table above shows only markets active on both venues. Prefer ones with depth on both sides and pair funding at or above zero.</li>
-      <li><b>Open the first leg with a limit order.</b> Maker volume is cheaper and is understood to weigh more. Note the size in coins, not dollars.</li>
-      <li><b>Open the opposite leg with the same size in coins.</b> Prices differ slightly between venues; delta is measured in coins. Then paste your address here and check that the delta is close to zero.</li>
-      <li><b>Keep a real buffer.</b> 2–3x leverage on each leg and at least 25% to liquidation. If one leg runs against you, add margin to it instead of closing it.</li>
-      <li><b>Close both legs together.</b> Never leave one side open on its own.</li>
+      <li><b>One address for both venues</b>The hedge only counts when both legs sit on the same L1 address.</li>
+      <li><b>Pick a market listed on both</b>Look for volume on both sides and pair funding at or above zero.</li>
+      <li><b>Open the first leg with a limit order</b>Maker volume is cheaper. Note the size in coins, not dollars.</li>
+      <li><b>Open the opposite leg, same size in coins</b>Then paste your address above and check that delta is near zero.</li>
+      <li><b>Keep a buffer</b>2–3x leverage and at least 25% to liquidation. If a leg runs against you, add margin.</li>
+      <li><b>Close both legs together</b>Never leave one side open on its own.</li>
     </ol>
-    <div class="note bad"><b>No take-profit or stop-loss on a single leg.</b> If it fires, the other leg is left naked with leverage. Close manually, both legs.</div>
-    <h3>Not allowed</h3>
-    <ul class="plain">
-      <li>Trading with yourself on the same venue, for example long from the main account and short from a sub-account or a second wallet on RH. That is wash trading.</li>
-      <li>Splitting volume across sub-accounts to farm points.</li>
-    </ul>
-    <p class="muted">A hedge between RH and Core is different: the two venues have separate order books, so each leg trades against real counterparties.</p>
-    <h3>Risks this page will flag, but cannot remove</h3>
-    <ul class="plain">
-      <li><b>Funding drifts apart.</b> RH and Core funding is set independently, and a pair that earns today can pay tomorrow.</li>
-      <li><b>A gap on one leg.</b> A fast move can liquidate one side before you top it up.</li>
-      <li><b>Rules change weekly.</b> What counted last week may not count this week.</li>
-    </ul>
+    <div class="note bad"><b>No take-profit or stop-loss on a single leg.</b> If it fires, the other leg is left unhedged. Close both manually.</div>
+    <div class="rules">
+      <div><h3>Not allowed</h3>
+        <ul class="plain">
+          <li>Trading against yourself on one venue (main account vs sub-account or a second wallet). That is wash trading.</li>
+          <li>Splitting volume across sub-accounts to farm points.</li>
+        </ul></div>
+      <div><h3>Risks</h3>
+        <ul class="plain">
+          <li><b>Funding drifts.</b> A pair that earns today can pay tomorrow.</li>
+          <li><b>Gaps.</b> A fast move can liquidate one leg before you top it up.</li>
+          <li><b>Rules change.</b> What counted last week may not count now.</li>
+        </ul></div>
+    </div>
     <div class="cta-row">
       <a class="btn btn-ink ref-link" data-venue="rh" href="#" target="_blank" rel="noopener">Start on Lighter RH</a>
       <span class="code-chip">Referral code <b class="ref-code"></b></span>
@@ -115,8 +133,8 @@
 </main>
 
 <footer class="wrap foot">
-  <p>Hedge Check is an independent, open-source tool and is not affiliated with Lighter or Robinhood. Data comes from public Lighter APIs (api.rh.lighter.xyz, mainnet.zklighter.elliot.ai and their explorers) directly in your browser. Not financial advice.</p>
-  <p><a id="repo" href="#" target="_blank" rel="noopener">Source on GitHub</a> · <span id="updated"></span></p>
+  <p>Hedge Check is an independent, open-source tool, not affiliated with Lighter or Robinhood. Data comes from public Lighter APIs, straight to your browser. Not financial advice.</p>
+  <p><a id="repo" href="#" target="_blank" rel="noopener">Source on GitHub</a> · <a class="ref-link" data-venue="rh" href="#" target="_blank" rel="noopener">Lighter RH with code <span class="ref-code"></span></a> · <span id="updated"></span></p>
 </footer>
 
 <script type="module" src="app.js"></script>

@@ -364,3 +364,15 @@ export function boostFor(week, m) {
 }
 
 export const isAddress = (s) => /^0x[0-9a-fA-F]{40}$/.test(String(s || "").trim());
+
+// ---------------------------------------------------------------------------
+// Drop estimate: what a point could be worth for a given FDV and total points
+// ---------------------------------------------------------------------------
+/** poolLit tokens are split pro rata across totalPoints. Token price = fdv / supply. */
+export function dropEstimate(fdv, totalPoints, myPoints, poolLit, supply) {
+  if (!(fdv > 0) || !(totalPoints > 0) || !(poolLit > 0) || !(supply > 0)) return null;
+  const price = fdv / supply;
+  const litPerPoint = poolLit / totalPoints;
+  const mine = Math.max(0, Number(myPoints) || 0);
+  return { price, poolUsd: poolLit * price, litPerPoint, usdPerPoint: litPerPoint * price, myLit: mine * litPerPoint, myUsd: mine * litPerPoint * price };
+}
