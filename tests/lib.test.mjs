@@ -195,3 +195,12 @@ test("drop estimate: pool split pro rata, price from FDV", () => {
   assert.equal(L.dropEstimate(2e9, 0, 1000, 11e6, 1e9), null);
   assert.equal(L.dropEstimate(2e9, 2e6, "x", 11e6, 1e9).myUsd, 0);
 });
+
+test("weekly: an entry with an announced date stays fresh through day 7 after the announcement", () => {
+  const w = { weeks: [{ week_of: "2026-09-28", announced: "2026-10-02" }] };
+  assert.equal(L.latestWeek(w, Date.parse("2026-10-06T12:00:00Z")).stale, false);
+  assert.equal(L.latestWeek(w, Date.parse("2026-10-09T23:00:00Z")).stale, false);
+  assert.equal(L.latestWeek(w, Date.parse("2026-10-10T01:00:00Z")).stale, true);
+  const old = { weeks: [{ week_of: "2026-09-28" }] };
+  assert.equal(L.latestWeek(old, Date.parse("2026-10-06T12:00:00Z")).stale, true);
+});
