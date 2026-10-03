@@ -287,21 +287,21 @@ function renderDrop() {
   const s = dropState();
   const e = L.dropEstimate(s.fdv, s.total, s.mine, D.poolLit, D.supply);
   $("d-fdv-out").textContent = "$" + big(s.fdv);
-  $("d-total-out").textContent = big(s.total);
+  $("d-total-out").textContent = `${big(s.total)} → 1 point = ${fmt(e.litPerPoint, 2)} LIT`;
   const lit = S.bySym.LIT && (S.bySym.LIT.core?.mark || S.bySym.LIT.rh?.mark);
   $("d-now").hidden = !lit;
   if (lit) $("d-now").textContent = `Use today's price ($${fmt(lit, 2)} = $${big(lit * D.supply)} FDV)`;
-  const rows = D.scenarios.map((tp) => {
+  const rows = [...new Set([...D.scenarios, s.total])].sort((x, y) => x - y).map((tp) => {
     const x = L.dropEstimate(s.fdv, tp, s.mine, D.poolLit, D.supply);
-    return `<tr><td>${big(tp)} points</td><td>${money(x.usdPerPoint)}</td><td><b>${money(x.myUsd)}</b></td></tr>`;
+    return `<tr${tp === s.total ? ' class="sel"' : ""}><td>${big(tp)} points${tp === s.total ? " · your pick" : ""}</td><td>${fmt(x.litPerPoint, 2)} LIT</td><td>${money(x.usdPerPoint)}</td><td><b>${money(x.myUsd)}</b></td></tr>`;
   }).join("");
-  const text = `If $LIT trades at $${big(s.fdv)} FDV and ${big(s.total)} points share ${big(D.poolLit)} LIT, one Lighter point is worth ${money(e.usdPerPoint)}.${s.mine ? ` My ${fmt(s.mine, 0)} points: ${money(e.myUsd)}.` : ""}\n\nTry your numbers: ${CONFIG.siteUrl}/#drop\nTrade on Lighter RH: ${refUrl("rh")}`;
+  const text = `If $LIT trades at $${big(s.fdv)} FDV and ${big(s.total)} points share ${big(D.poolLit)} LIT, one Lighter point is ${fmt(e.litPerPoint, 2)} LIT, worth ${money(e.usdPerPoint)}.${s.mine ? ` My ${fmt(s.mine, 0)} points: ${money(e.myUsd)}.` : ""}\n\nTry your numbers: ${CONFIG.siteUrl}/#drop\nTrade on Lighter RH: ${refUrl("rh")}`;
   $("drop-out").innerHTML = `
     <div class="muted">Your drop</div>
     <div class="calc-size">${money(e.myUsd)}</div>
-    <div class="muted">${fmt(e.myLit, 0)} LIT at $${fmt(e.price, 2)} · 1 point ≈ <b>${money(e.usdPerPoint)}</b> · pool worth $${big(e.poolUsd)}</div>
-    <table class="scen"><thead><tr><th>If total points are</th><th>1 point</th><th>Your drop</th></tr></thead><tbody>${rows}</tbody></table>
-    <p class="fine">A guess, not a promise. Assumes ${big(D.poolLit)} LIT split evenly per point and a ${big(D.supply)} LIT max supply. Lighter has not published total points or final terms.</p>
+    <div class="muted">1 point = <b>${fmt(e.litPerPoint, 2)} LIT</b> ≈ <b>${money(e.usdPerPoint)}</b> · you get ${fmt(e.myLit, 0)} LIT at $${fmt(e.price, 2)}</div>
+    <table class="scen"><thead><tr><th>Other scenarios at $${big(s.fdv)} FDV</th><th>1 point =</th><th>worth</th><th>Your drop</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="fine">A guess, not a promise. LIT per point = ${big(D.poolLit)} LIT pool ÷ total points. Assumes an even split and a ${big(D.supply)} LIT max supply. Lighter has not published total points or final terms.</p>
     <div class="calc-actions">
       <a class="btn btn-ink" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">Share on X</a>
       <button class="btn btn-line" type="button" id="d-card">Download card</button>
@@ -319,7 +319,7 @@ function dropCard(s, e) {
   g.fillStyle = "#E7EEEC"; font(700, 30); g.fillText("Hedge Check", 132, 95);
   g.fillStyle = "#8E999C"; font(500, 30); g.fillText(s.mine ? `My Lighter drop with ${fmt(s.mine, 0)} points` : "What one Lighter point could be worth", 72, 210);
   g.fillStyle = "#E7EEEC"; font(700, 132); g.fillText(money(s.mine ? e.myUsd : e.usdPerPoint), 66, 350);
-  const cells = [["LIT FDV", "$" + big(s.fdv)], ["Total points", big(s.total)], ["1 point", money(e.usdPerPoint)], ["Pool", big(D.poolLit) + " LIT"]];
+  const cells = [["LIT FDV", "$" + big(s.fdv)], ["Total points", big(s.total)], ["1 point", fmt(e.litPerPoint, 2) + " LIT"], ["Worth", money(e.usdPerPoint)]];
   cells.forEach(([l, v], i) => {
     const x = 72 + i * 270;
     g.fillStyle = "#8E999C"; font(500, 24); g.fillText(l, x, 440);
