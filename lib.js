@@ -343,13 +343,15 @@ export function pairCalc(m, notionalUsd, leverage, longOn = "rh") {
 // Weekly notes
 // ---------------------------------------------------------------------------
 
-/** Newest week entry and whether it is older than 7 days. */
+/** Newest week entry and whether it is out of date. */
 export function latestWeek(weekly, nowMs = Date.now()) {
   const weeks = [...((weekly && weekly.weeks) || [])].sort((a, b) => b.week_of.localeCompare(a.week_of));
   if (!weeks.length) return null;
   const w = weeks[0];
-  const start = Date.parse(w.week_of + "T00:00:00Z");
-  return { week: w, stale: nowMs - start > 7 * 86400e3, rest: weeks.slice(1) };
+  // Fresh until the next weekly distribution: through day 7 after the announcement when its date
+  // is given (announced), otherwise 7 days from the Monday in week_of.
+  const start = Date.parse((w.announced || w.week_of) + "T00:00:00Z");
+  return { week: w, stale: nowMs - start > (w.announced ? 8 : 7) * 86400e3, rest: weeks.slice(1) };
 }
 
 /** Does a weekly boost apply to this market? */
