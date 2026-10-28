@@ -227,12 +227,57 @@ export function analysePairs(rhLegs, coreLegs, marketsBySymbol, t = DEFAULT_THRE
       if (fundPair < 0) reasons.push(`The pair pays ${Math.abs(fundPair).toFixed(2)} $/day in funding.`);
     }
     if (!reasons.length) reasons.push("Balanced hedge, healthy margin.");
+    const boost = kind === "pair" ? hedgeBoost(m.category || "other", rNet, cNet) : null;
     rows.push({ symbol: sym, kind, r, c, mr, mc, rNet, cNet, delta, deltaPct, deltaUsd,
-      bufR, bufC, fundR, fundC, fundPair, upnl, state, reasons, category: m.category || "other" });
+      bufR, bufC, fundR, fundC, fundPair, upnl, state, reasons, boost, category: m.category || "other" });
   }
   const rank = { bad: 0, warn: 1, ok: 2 };
   rows.sort((a, b) => rank[a.state] - rank[b.state] || Math.abs(b.deltaUsd) - Math.abs(a.deltaUsd));
   return rows;
+}
+
+// ---------------------------------------------------------------------------
+// Hedge boost (weekly points), per docs.lighter.xyz/programs/lighter-on-robinhood-chain-points
+// (checked 2026-10-28):
+//  * Crypto and RWA commodities/ETFs: Core short + RH long -> 2.5x.
+//  * RWA pre-IPOs and equities:       Core long  + RH short -> 2.5x.
+//  * Only that one pair of directions counts per market.
+//  * Partial hedge: RH $100 with only $50 opposing on Core -> 1.75x.
+//    Opposing Core position the same size or larger -> full 2.5x.
+//  * The docs give no formula for other ratios, so only those two points are stated as fact.
+// ---------------------------------------------------------------------------
+
+export const HEDGE_BOOST_FULL = 2.5;
+export const HEDGE_BOOST_DOC_HALF = 1.75;   // the docs' 50% example
+
+/** Required RH direction (+1 long, -1 short) for the boost, or null if the category is not listed. */
+export function boostRhSign(category) {
+  if (category === "crypto" || category === "commodity" || category === "etf") return 1;
+  if (category === "stock" || category === "preipo") return -1;
+  return null;
+}
+
+/**
+ * Hedge boost status for one pair (sizes in coins, signed).
+ * Returns { listed, rightDirection, coverage, full, x, note }.
+ * x is set only where the docs state the value (full hedge -> 2.5, exactly 50% -> 1.75).
+ */
+export function hedgeBoost(category, rNet, cNet) {
+  const need = boostRhSign(category);
+  const res = { listed: need != null, rightDirection: false, coverage: 0, full: false, x: null, note: "" };
+  if (need == null) { res.note = "This category is not in the hedge-boost table."; return res; }
+  if (!rNet) { res.note = "No RH position, so there is nothing for the boost to scale."; return res; }
+  const rhOk = Math.sign(rNet) === need;
+  const coreOk = cNet && Math.sign(cNet) === -need;
+  res.rightDirection = !!(rhOk && coreOk);
+  const want = need > 0 ? "long RH + short Core" : "short RH + long Core";
+  if (!res.rightDirection) { res.note = `Boosted direction for this category is ${want}.`; return res; }
+  res.coverage = Math.abs(cNet) / Math.abs(rNet);
+  res.full = res.coverage >= 1 - 1e-9;
+  if (res.full) { res.x = HEDGE_BOOST_FULL; res.note = `Core covers RH in full: ${HEDGE_BOOST_FULL}x on weekly points.`; }
+  else if (Math.abs(res.coverage - 0.5) < 1e-6) { res.x = HEDGE_BOOST_DOC_HALF; res.note = `Core covers 50% of RH: ${HEDGE_BOOST_DOC_HALF}x per the docs.`; }
+  else res.note = `Core covers ${(res.coverage * 100).toFixed(0)}% of RH: partial boost (docs: 50% = ${HEDGE_BOOST_DOC_HALF}x, 100%+ = ${HEDGE_BOOST_FULL}x; no formula published for other ratios). Match or exceed RH on Core for the full ${HEDGE_BOOST_FULL}x.`;
+  return res;
 }
 
 function fmtSigned(x) {

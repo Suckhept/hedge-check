@@ -204,3 +204,36 @@ test("weekly: an entry with an announced date stays fresh through day 7 after th
   const old = { weeks: [{ week_of: "2026-09-28" }] };
   assert.equal(L.latestWeek(old, Date.parse("2026-10-06T12:00:00Z")).stale, true);
 });
+
+test("hedge boost follows the docs table and partial-hedge rule", () => {
+  // crypto: RH long + Core short
+  let b = L.hedgeBoost("crypto", 1, -1);
+  assert.equal(b.rightDirection, true); assert.equal(b.full, true); assert.equal(b.x, 2.5);
+  b = L.hedgeBoost("crypto", 1, -2);                      // Core larger still gets full boost
+  assert.equal(b.full, true); assert.equal(b.x, 2.5);
+  b = L.hedgeBoost("crypto", 1, -0.5);                    // docs example
+  assert.equal(b.full, false); assert.equal(b.x, 1.75); close(b.coverage, 0.5);
+  b = L.hedgeBoost("crypto", 1, -0.8);                    // no published value
+  assert.equal(b.full, false); assert.equal(b.x, null); close(b.coverage, 0.8);
+  b = L.hedgeBoost("crypto", -1, 1);                      // wrong direction
+  assert.equal(b.rightDirection, false); assert.equal(b.x, null);
+  // equities: RH short + Core long
+  b = L.hedgeBoost("stock", -2, 2);
+  assert.equal(b.full, true);
+  assert.equal(L.hedgeBoost("stock", 2, -2).rightDirection, false);
+  assert.equal(L.hedgeBoost("preipo", -1, 1).full, true);
+  assert.equal(L.hedgeBoost("etf", 1, -1).full, true);
+  assert.equal(L.hedgeBoost("commodity", 1, -1).full, true);
+  assert.equal(L.hedgeBoost("fx", 1, -1).listed, false);
+});
+
+test("analysePairs attaches hedge boost to real pairs only", () => {
+  const rows = L.analysePairs(
+    { BTC: { net: 0.01, liq: null, upnl: 0 }, AAPL: { net: -1, liq: null, upnl: 0 } },
+    { BTC: { net: -0.005, liq: null, upnl: 0 } },
+    bySym);
+  const btc = rows.find((r) => r.symbol === "BTC");
+  assert.equal(btc.boost.x, 1.75);
+  const aapl = rows.find((r) => r.symbol === "AAPL");
+  assert.equal(aapl.boost, null);
+});

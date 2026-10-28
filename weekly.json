@@ -2,6 +2,17 @@
   "_help": "Edit once a week. Newest week is shown on top (sorted by week_of, a Monday, YYYY-MM-DD). announced: date of the team's post (YYYY-MM-DD); the entry counts as current through 7 days after it. boosts[].scope: 'hedge' (RH<->Core hedge from one address) | 'market' | 'wallet' | 'other'. Optional: x (multiplier, omit if the team did not publish one), categories (crypto|stock|etf|preipo|commodity|fx), symbols, note. Only put here what the Lighter team actually announced, and link the source.",
   "weeks": [
     {
+      "week_of": "2026-10-26",
+      "headline": "Docs update: partial hedges now count. $100 on RH with $50 opposing on Core = 1.75x; Core the same size or larger = full 2.5x.",
+      "boosts": [
+        { "scope": "hedge", "x": 2.5, "categories": ["crypto", "commodity", "etf"], "note": "Core short + RH long. Partial: 50% of RH covered = 1.75x." },
+        { "scope": "hedge", "x": 2.5, "categories": ["stock", "preipo"], "note": "Core long + RH short. Partial: 50% of RH covered = 1.75x." }
+      ],
+      "warning": "Weekly points only, and the boost can be updated weekly.",
+      "announced": "2026-10-28",
+      "source": "docs.lighter.xyz/programs/lighter-on-robinhood-chain-points (checked Oct 28 2026)"
+    },
+    {
       "week_of": "2026-09-28",
       "drop_points": 95000,
       "headline": "95,000 points distributed on Oct 2. Team hint: long stocks on Lighter RH and hedge them with a short on Lighter Core.",

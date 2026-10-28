@@ -461,6 +461,7 @@ function pairCard(r) {
     </div>
     <div class="legs">${legKv("rh", r.r, r.mr, r.bufR, r.fundR)}${legKv("core", r.c, r.mc, r.bufC, r.fundC)}</div>
     <ul class="reasons ${r.state === "ok" ? "" : r.state === "warn" ? "" : ""}">${r.reasons.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+    ${r.boost && r.boost.listed ? `<p class="boost ${r.boost.full ? "ok" : r.boost.rightDirection ? "warn" : "bad"}"><b>Hedge boost: ${r.boost.full ? `${L.HEDGE_BOOST_FULL}x` : r.boost.x ? `${r.boost.x}x` : r.boost.rightDirection ? "partial" : "none"}</b> ${esc(r.boost.note)}</p>` : ""}
   </article>`;
 }
 

@@ -132,6 +132,10 @@ p { margin: 0 0 10px; }
 .leg-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; } .leg-title.rh { color: var(--rh); } .leg-title.core { color: var(--core); }
 .reasons { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 13.5px; }
 .reasons li { margin: 2px 0; }
+.boost { margin-top: 8px; font-size: 13.5px; border-radius: 8px; padding: 6px 10px; }
+.boost.ok { background: var(--ok-soft); color: var(--ok); } .boost.warn { background: var(--warn-soft); color: var(--warn); } .boost.bad { background: var(--bad-soft); color: var(--bad); }
+.boost-table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 14px; }
+.boost-table th, .boost-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .empty-state { background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius-lg); padding: 22px; }
 .share-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
