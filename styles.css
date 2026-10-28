@@ -49,7 +49,16 @@ p { margin: 0 0 10px; }
 .nav a { text-decoration: none; } .nav a:hover { color: var(--ink); }
 .top-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; }
 .icon-btn { background: none; border: 1px solid var(--line); color: var(--ink); width: 34px; height: 34px; border-radius: 10px; cursor: pointer; font-size: 15px; }
+.ref-pill { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 10px; text-decoration: none; white-space: nowrap;
+  background: var(--rh-soft); border: 1px solid color-mix(in srgb, var(--rh) 45%, transparent); color: var(--ink); font-size: 13px; }
+.ref-pill:hover { border-color: var(--rh); }
+.ref-pill-k { color: var(--muted); font-weight: 500; }
+.ref-pill b { font-weight: 800; font-size: 15px; letter-spacing: .02em; }
+.ref-pill-v { font-weight: 700; color: var(--rh); }
+.follow-x { height: 34px; padding: 0 12px; font-size: 13px; }
 @media (max-width: 760px) { .nav { display: none; } .top .btn { padding: 8px 12px; font-size: 13px; } }
+@media (max-width: 560px) { .top-in { gap: 10px; } .top-actions { gap: 6px; } .brand { font-size: 0; gap: 0; } .hide-xs, .ref-pill-k { display: none; } .ref-pill, .follow-x { padding: 0 9px; } .ref-pill b { font-size: 13px; } }
+@media (max-width: 400px) { .top .follow-x { font-size: 0; gap: 0; } .follow-x svg { width: 15px; height: 15px; } }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 10px; padding: 10px 16px; font: 600 14px/1 Inter, sans-serif; text-decoration: none; cursor: pointer; border: 1px solid transparent; white-space: nowrap; }
 .btn-ink { background: var(--ink); color: var(--bg); }
